@@ -14,19 +14,31 @@ export default async function handler(req, res) {
         return res.status(401).json({ valid: false });
       }
       
-      const { data: session, error } = await supabase
+      // Get session
+      const { data: session, error: sessionError } = await supabase
         .from('admin_sessions')
-        .select('admin_id, admins(id, name, email)')
+        .select('admin_id')
         .eq('token', token)
         .single();
       
-      if (error || !session) {
+      if (sessionError || !session) {
+        return res.status(401).json({ valid: false });
+      }
+      
+      // Get admin info
+      const { data: admin, error: adminError } = await supabase
+        .from('admins')
+        .select('id, name, email')
+        .eq('id', session.admin_id)
+        .single();
+      
+      if (adminError || !admin) {
         return res.status(401).json({ valid: false });
       }
       
       return res.status(200).json({ 
         valid: true, 
-        admin: session.admins 
+        admin: admin 
       });
     }
     res.status(405).json({ error: 'Method not allowed' });
