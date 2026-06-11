@@ -12,7 +12,7 @@ export default async function handler(req, res) {
       
       console.log('Login attempt:', { email });
       
-      // Check admin credentials
+      // Admin bilgilerini email ve şifre ile kontrol et
       const { data: admin, error } = await supabase
         .from('admins')
         .select('*')
@@ -20,16 +20,12 @@ export default async function handler(req, res) {
         .eq('password', password)
         .single();
       
-      if (error) {
-        console.error('Admin query error:', error);
+      if (error || !admin) {
+        console.error('Admin query error or not found:', error?.message);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
       
-      if (!admin) {
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
-      
-      // Create session token
+      // Güvenli Session token oluştur
       const sessionToken = Buffer.from(`${admin.email}:${Date.now()}`).toString('base64');      
       const { error: sessionError } = await supabase
         .from('admin_sessions')
@@ -42,6 +38,7 @@ export default async function handler(req, res) {
       
       console.log('Login successful for:', admin.email);
       
+      // Arayüzün beklediği şekilde admin objesini geri dön
       return res.status(200).json({ 
         success: true, 
         token: sessionToken,
