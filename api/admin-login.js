@@ -8,15 +8,16 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'POST') {
-      const { email, password } = req.body;
+      // Frontend'den email değil, 'name' (İsim) bekliyoruz
+      const { name, password } = req.body;
       
-      console.log('Login attempt:', { email });
+      console.log('Login attempt for:', { name });
       
-      // Admin bilgilerini email ve şifre ile kontrol et
+      // Veritabanında name (İsim) ve şifre ile kontrol yapıyoruz
       const { data: admin, error } = await supabase
         .from('admins')
         .select('*')
-        .eq('email', email)
+        .eq('name', name)
         .eq('password', password)
         .single();
       
@@ -25,8 +26,8 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
       
-      // Güvenli Session token oluştur
-      const sessionToken = Buffer.from(`${admin.email}:${Date.now()}`).toString('base64');      
+      // Güvenli Session token'ı name üzerinden oluşturuyoruz
+      const sessionToken = Buffer.from(`${admin.name}:${Date.now()}`).toString('base64');      
       const { error: sessionError } = await supabase
         .from('admin_sessions')
         .insert({ admin_id: admin.id, token: sessionToken });
@@ -36,13 +37,13 @@ export default async function handler(req, res) {
         throw sessionError;
       }
       
-      console.log('Login successful for:', admin.email);
+      console.log('Login successful for:', admin.name);
       
-      // Arayüzün beklediği şekilde admin objesini geri dön
+      // Arayüze id ve name dönüyoruz, email arayıp çökmesin
       return res.status(200).json({ 
         success: true, 
         token: sessionToken,
-        admin: { id: admin.id, name: admin.name, email: admin.email }
+        admin: { id: admin.id, name: admin.name }
       });
     }
     res.status(405).json({ error: 'Method not allowed' });
